@@ -1,14 +1,14 @@
-import axios from 'axios';
+import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ||
-  (import.meta.env.MODE === 'production'
-    ? 'https://cloud-storage-backend-k1dt.onrender.com'
-    : 'http://127.0.0.1:8000');
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_URL is not defined");
+}
 
-console.log('🔗 API URL:', API_BASE_URL);
-console.log('🌍 Environment:', import.meta.env.MODE);
-console.log('📦 VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log("🔗 API URL:", API_BASE_URL);
+console.log("🌍 Environment:", import.meta.env.MODE);
+
 
 // Create axios instance with default config
 const api = axios.create({
