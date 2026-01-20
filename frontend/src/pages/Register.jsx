@@ -3,6 +3,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { authAPI } from '../services/api';
+
+
 
 function Register() {
   const [email, setEmail] = useState('');
@@ -16,7 +19,7 @@ function Register() {
     setLoading(true);
     
     try {
-      await axios.post('http://127.0.0.1:8000/auth/register', {
+      await authAPI.register({
         email,
         password,
         full_name: fullName

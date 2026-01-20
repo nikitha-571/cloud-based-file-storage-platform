@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Mail, ArrowLeft } from 'lucide-react';
+import { authAPI } from '../services/api';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -16,7 +17,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/auth/forgot-password', {
+      const response = await authAPI.forgotPassword({
         email
       });
 

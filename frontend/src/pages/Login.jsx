@@ -4,6 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import GoogleLoginButton from '../components/GoogleLoginButton';
+import { authAPI } from '../services/api';
+
+
+
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -16,7 +20,7 @@ function Login() {
     setLoading(true);
     
     try {
-      const response = await axios.post('http://127.0.0.1:8000/auth/login', {
+      const response = await authAPI.login({
         email,
         password
       });

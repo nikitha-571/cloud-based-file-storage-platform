@@ -4,6 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Lock, CheckCircle } from 'lucide-react';
+import { authAPI } from '../services/api';
+
+
 
 function ResetPassword() {
   const { token } = useParams();
@@ -20,7 +23,7 @@ function ResetPassword() {
 
   const verifyToken = async () => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/auth/verify-reset-token/${token}`);
+      const response = await authAPI.verifyResetToken(token);
       setTokenValid(response.data.valid);
       if (!response.data.valid) {
         toast.error('Invalid or expired reset token');
@@ -49,7 +52,7 @@ function ResetPassword() {
     setLoading(true);
 
     try {
-      await axios.post('http://127.0.0.1:8000/auth/reset-password', {
+      await authAPI.resetPassword({
         token,
         new_password: newPassword
       });
