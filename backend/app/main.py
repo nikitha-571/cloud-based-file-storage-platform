@@ -18,8 +18,8 @@ app.add_middleware(
         "http://localhost:5174",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
-        "https://*.vercel.app",
-        "https://cloud-storage-frontend.vercel.app",
+        "https://*.netlify.app",
+        "https://cloud-storage-app.netlify.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
