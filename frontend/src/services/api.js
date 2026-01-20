@@ -1,14 +1,15 @@
 import axios from 'axios';
 
+// Get API URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-console.log('🌍 Connecting to API:', API_BASE_URL); 
+console.log('🌍 Connecting to API:', API_BASE_URL);
 
-//const API_BASE_URL = 'http://127.0.0.1:8000';
-
+// Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
+
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -23,6 +24,7 @@ const processQueue = (error, token = null) => {
   
   failedQueue = [];
 };
+
 // Add token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -31,6 +33,7 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -52,15 +55,13 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+        const response = await api.post('/auth/refresh', {}, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
           }
         });
 
         const { access_token, refresh_token } = response.data;
-
         localStorage.setItem('token', access_token);
         if (refresh_token) {
           localStorage.setItem('refresh_token', refresh_token);
@@ -76,7 +77,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-
+        
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_email');
@@ -91,6 +92,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 export const authAPI = {
   register: (userData) => {
     return api.post('/auth/register', userData);
@@ -118,7 +120,6 @@ export const authAPI = {
   }
 };
 
-// Folders API
 export const foldersAPI = {
   getAll: (parentId = null) => {
     const params = parentId ? { parent_id: parentId } : {};
@@ -147,7 +148,6 @@ export const foldersAPI = {
   },
 };
 
-// Files API
 export const filesAPI = {
   getAll: (folderId = null, sortBy = 'created_at', sortOrder = 'desc', page = 1, limit = 50) => {
     const params = { sort_by: sortBy, sort_order: sortOrder, page, limit };
@@ -235,7 +235,6 @@ export const filesAPI = {
   },
 };
 
-// Version History API
 export const versionsAPI = {
   getFileVersions: (fileId) => {
     return api.get(`/versions/file/${fileId}`);
@@ -245,7 +244,6 @@ export const versionsAPI = {
   }
 };
 
-// Activity Logs API
 export const activitiesAPI = {
   getUserActivities: (limit = 50) => {
     return api.get('/activities/', { params: { limit } });
@@ -264,14 +262,12 @@ export const activitiesAPI = {
   }
 };
 
-// Storage API 
 export const storageAPI = {
   getUsage: () => {
-    return api.get('/files/'); 
+    return api.get('/files/');
   }
 };
 
-// Tags API
 export const tagsAPI = {
   getAll: () => {
     return api.get('/tags/');
@@ -293,7 +289,6 @@ export const tagsAPI = {
   }
 };
 
-// Shares API
 export const sharesAPI = {
   createShare: (fileId, folderId, email, role) => {
     return api.post('/shares/', {
