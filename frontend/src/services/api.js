@@ -1,9 +1,14 @@
 import axios from 'axios';
 
-// Get API URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-console.log('🌍 Connecting to API:', API_BASE_URL);
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === 'production'
+    ? 'https://cloud-storage-backend-k1dt.onrender.com'
+    : 'http://127.0.0.1:8000');
+
+console.log('🔗 API URL:', API_BASE_URL);
+console.log('🌍 Environment:', import.meta.env.MODE);
+console.log('📦 VITE_API_URL:', import.meta.env.VITE_API_URL);
 
 // Create axios instance with default config
 const api = axios.create({
@@ -21,7 +26,6 @@ const processQueue = (error, token = null) => {
       prom.resolve(token);
     }
   });
-  
   failedQueue = [];
 };
 
@@ -39,6 +43,7 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // If error is 401 and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -55,7 +60,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await api.post('/auth/refresh', {}, {
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
           }
@@ -77,13 +82,13 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        
+
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_email');
         localStorage.removeItem('user_name');
         localStorage.removeItem('user_picture');
-        
+
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -120,6 +125,7 @@ export const authAPI = {
   }
 };
 
+// Folders API
 export const foldersAPI = {
   getAll: (parentId = null) => {
     const params = parentId ? { parent_id: parentId } : {};
@@ -148,19 +154,18 @@ export const foldersAPI = {
   },
 };
 
+// Files API
 export const filesAPI = {
   getAll: (folderId = null, sortBy = 'created_at', sortOrder = 'desc', page = 1, limit = 50) => {
     const params = { sort_by: sortBy, sort_order: sortOrder, page, limit };
     if (folderId) params.folder_id = folderId;
     return api.get('/files/', { params });
   },
-  
   upload: (file, folderId = null, onProgress = null) => {
     const formData = new FormData();
     formData.append('file', file);
-    
     const params = folderId ? { folder_id: folderId } : {};
-    
+
     return api.post('/files/upload', formData, {
       params,
       headers: {
@@ -176,42 +181,32 @@ export const filesAPI = {
       },
     });
   },
-  
   getDownloadUrl: (fileId) => {
     return api.get(`/files/${fileId}`);
   },
-  
   delete: (fileId) => {
     return api.delete(`/files/${fileId}`);
   },
-  
   permanentDelete: (fileId) => {
     return api.delete(`/files/${fileId}/permanent`);
   },
-
   toggleStar: (fileId) => {
     return api.post(`/files/${fileId}/star`);
   },
-  
   getStarred: () => {
     return api.get('/files/starred/all');
   },
-  
   getTrashed: () => {
     return api.get('/files/trash/all');
   },
-  
   restore: (fileId) => {
     return api.post(`/files/${fileId}/restore`);
   },
-  
   getPreview: (fileId) => {
     return api.get(`/files/${fileId}/preview`);
   },
-
   search: (query, filters = {}) => {
     const params = {};
-    
     if (query && query.trim()) {
       params.q = query;
     }
@@ -230,11 +225,12 @@ export const filesAPI = {
     if (filters.sortOrder) {
       params.sort_order = filters.sortOrder;
     }
-    
+
     return api.get('/files/search', { params });
   },
 };
 
+// Version History API
 export const versionsAPI = {
   getFileVersions: (fileId) => {
     return api.get(`/versions/file/${fileId}`);
@@ -244,6 +240,7 @@ export const versionsAPI = {
   }
 };
 
+// Activity Logs API
 export const activitiesAPI = {
   getUserActivities: (limit = 50) => {
     return api.get('/activities/', { params: { limit } });
@@ -262,6 +259,7 @@ export const activitiesAPI = {
   }
 };
 
+// Storage API
 export const storageAPI = {
   getUsage: () => {
     return api.get('/files/');
