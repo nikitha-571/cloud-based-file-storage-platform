@@ -7,8 +7,6 @@ import GoogleLoginButton from '../components/GoogleLoginButton';
 import { authAPI } from '../services/api';
 
 
-
-
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,12 +18,26 @@ function Login() {
     setLoading(true);
     
     try {
+      console.log('🔑 Attempting login...');
       const response = await authAPI.login({
         email,
         password
       });
+      console.log('🔑 Login response:', response.data);
+      const token = response.data.access_token;
+       if (!token) {
+        throw new Error('No access token in response');
+      }
+      console.log('🔑 Storing token:', token?.substring(0, 20) + '...');
       
-      localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem('token', token);
+
+      const storedToken = localStorage.getItem('token');
+      console.log('🔑 Token stored successfully:', storedToken.substring(0, 30) + '...');
+      console.log('🔑 Tokens match:', token === storedToken);
+    
+    
+    console.log('🔑 Stored token verified:', localStorage.getItem('token')?.substring(0, 20) + '...');
       if (response.data.refresh_token) { 
         localStorage.setItem('refresh_token', response.data.refresh_token);
       }

@@ -53,6 +53,7 @@ def update_folder(
     """Update folder name"""
     return folder_service.update_folder(db, folder_id, folder_update, current_user)
 
+
 @router.post("/{folder_id}/restore", response_model=FolderResponse)
 def restore_folder(
     folder_id: int,
@@ -79,3 +80,12 @@ def permanently_delete_folder(
 ):
     """Permanently delete folder from database"""
     return folder_service.permanently_delete_folder(db, folder_id, current_user)
+
+@router.get("/{folder_id}/path")
+def get_folder_path_route(
+    folder_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    """Get the full path for a folder"""
+    return folder_service.get_folder_path(db, folder_id, current_user)

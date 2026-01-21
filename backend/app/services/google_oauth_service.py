@@ -11,14 +11,13 @@ import requests as http_requests
 def verify_google_token(token: str) -> dict:
     """Verify Google ID token and return user info"""
     try:
-        # Verify the token
         idinfo = id_token.verify_oauth2_token(
             token,
             requests.Request(),
             settings.GOOGLE_CLIENT_ID
         )
 
-        # Token is valid, return user info
+
         return {
             "email": idinfo.get("email"),
             "name": idinfo.get("name"),
@@ -30,7 +29,7 @@ def verify_google_token(token: str) -> dict:
 
 
 def exchange_code_for_token(code: str) -> str:
-    """Exchange authorization code for access token"""
+
     token_url = "https://oauth2.googleapis.com/token"
 
     data = {
@@ -56,19 +55,14 @@ def exchange_code_for_token(code: str) -> str:
 def authenticate_google_user(db: Session, code: str):
     """Authenticate user with Google OAuth code"""
 
-    # Exchange code for token
     id_token_str = exchange_code_for_token(code)
-
-    # Verify token and get user info
     google_user_info = verify_google_token(id_token_str)
-
-    # Check if user exists
     user = db.query(User).filter(
         User.email == google_user_info["email"]
     ).first()
 
     if user:
-        # Update existing user with OAuth info if not already set
+
         if not user.oauth_provider:
             user.oauth_provider = "google"
             user.oauth_id = google_user_info["google_id"]
@@ -84,13 +78,12 @@ def authenticate_google_user(db: Session, code: str):
             oauth_provider="google",
             oauth_id=google_user_info["google_id"],
             profile_picture=google_user_info["picture"],
-            hashed_password=None  # No password for OAuth users
+            hashed_password=None
         )
         db.add(user)
         db.commit()
         db.refresh(user)
 
-    # Create access token
     access_token = create_access_token(data={"sub": user.email})
 
     return {

@@ -9,7 +9,7 @@ class Folder(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    parent_id = Column(Integer, ForeignKey("folders.id"), nullable=True)  # For nested folders
+    parent_id = Column(Integer, ForeignKey("folders.id"), nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_deleted = Column(Boolean, default=False)  # For trash functionality
     created_at = Column(DateTime(timezone=True), server_default=func.now())

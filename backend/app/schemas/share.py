@@ -7,7 +7,7 @@ class ShareCreate(BaseModel):
     file_id: Optional[int] = None
     folder_id: Optional[int] = None
     shared_with_email: EmailStr
-    role: str  # "viewer" or "editor"
+    role: str
 
 
 class ShareResponse(BaseModel):

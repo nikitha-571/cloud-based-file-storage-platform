@@ -13,10 +13,10 @@ class User(Base):
     full_name = Column(String)
     is_active = Column(Boolean, default=True)
 
-    # ← OAUTH FIELDS
-    oauth_provider = Column(String, nullable=True)  # 'google', 'github', etc.
-    oauth_id = Column(String, nullable=True, unique=True)  # Provider's user ID
-    profile_picture = Column(String, nullable=True)  # Profile picture URL
+
+    oauth_provider = Column(String, nullable=True)
+    oauth_id = Column(String, nullable=True, unique=True)
+    profile_picture = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

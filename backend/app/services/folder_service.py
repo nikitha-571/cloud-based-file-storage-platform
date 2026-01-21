@@ -7,12 +7,12 @@ from fastapi import HTTPException
 
 
 def create_folder(db: Session, folder: FolderCreate, user_email: str):
-    # Get user
+
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if parent folder exists (if parent_id provided)
+
     if folder.parent_id:
         parent = db.query(Folder).filter(
             Folder.id == folder.parent_id,
@@ -34,22 +34,21 @@ def create_folder(db: Session, folder: FolderCreate, user_email: str):
 
 
 def get_user_folders(db: Session, user_email: str, parent_id: Optional[int] = None):
-    # Get user
+
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get folders
     query = db.query(Folder).filter(
         Folder.owner_id == user.id,
         Folder.is_deleted == False
     )
 
     if parent_id is None:
-        # Get root folders (no parent)
+
         query = query.filter(Folder.parent_id == None)
     else:
-        # Get subfolders
+
         query = query.filter(Folder.parent_id == parent_id)
 
     return query.all()
@@ -110,14 +109,12 @@ def delete_folder(db: Session, folder_id: int, user_email: str):
 
 
 def get_trashed_folders(db: Session, user_email: str):
-    """Get all deleted folders for a user"""
 
-    # Get user
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get trashed folders
+
     return db.query(Folder).filter(
         Folder.owner_id == user.id,
         Folder.is_deleted == True
@@ -127,12 +124,12 @@ def get_trashed_folders(db: Session, user_email: str):
 def restore_folder(db: Session, folder_id: int, user_email: str):
     """Restore a folder from trash"""
 
-    # Get user
+
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get folder - check if it belongs to user
+
     folder = db.query(Folder).filter(
         Folder.id == folder_id,
         Folder.owner_id == user.id
@@ -141,7 +138,7 @@ def restore_folder(db: Session, folder_id: int, user_email: str):
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    # Check if it's actually deleted
+
     if not folder.is_deleted:
         raise HTTPException(status_code=400, detail="Folder is not in trash")
 
@@ -155,12 +152,10 @@ def restore_folder(db: Session, folder_id: int, user_email: str):
 def search_folders(db: Session, user_email: str, query: str):
     """Search folders by name"""
 
-    # Get user
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Search folders (case-insensitive)
     return db.query(Folder).filter(
         Folder.owner_id == user.id,
         Folder.is_deleted == False,
@@ -171,12 +166,11 @@ def search_folders(db: Session, user_email: str, query: str):
 def permanently_delete_folder(db: Session, folder_id: int, user_email: str):
     """Permanently delete a folder from database"""
 
-    # Get user
+
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get folder - check if it belongs to user
     folder = db.query(Folder).filter(
         Folder.id == folder_id,
         Folder.owner_id == user.id
@@ -185,15 +179,47 @@ def permanently_delete_folder(db: Session, folder_id: int, user_email: str):
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    # Check if folder is in trash before permanent deletion
     if not folder.is_deleted:
         raise HTTPException(
             status_code=400,
             detail="Folder must be in trash before permanent deletion"
         )
 
-    # Delete from database
     db.delete(folder)
     db.commit()
 
     return {"message": "Folder permanently deleted"}
+
+
+def get_folder_path(db: Session, folder_id: int, user_email: str):
+    """Get the complete path from root to this folder"""
+    user = db.query(User).filter(User.email == user_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    folder = db.query(Folder).filter(
+        Folder.id == folder_id,
+        Folder.owner_id == user.id
+    ).first()
+
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    path = []
+    current = folder
+
+    while current:
+        path.insert(0, {
+            "id": current.id,
+            "name": current.name
+        })
+
+        if current.parent_id:
+            current = db.query(Folder).filter(
+                Folder.id == current.parent_id,
+                Folder.owner_id == user.id
+            ).first()
+        else:
+            current = None
+
+    return path

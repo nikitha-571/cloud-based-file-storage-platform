@@ -13,7 +13,6 @@ def create_tag(db: Session, tag_data: TagCreate, user_email: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if tag name already exists for this user
     existing_tag = db.query(Tag).filter(
         Tag.name == tag_data.name,
         Tag.user_id == user.id
@@ -100,7 +99,6 @@ def add_tags_to_file(db: Session, file_id: int, tag_ids: List[int], user_email: 
         Tag.user_id == user.id
     ).all()
 
-    # Replace existing tags
     file.tags = tags
     db.commit()
     db.refresh(file)

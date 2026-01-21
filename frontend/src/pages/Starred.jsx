@@ -48,7 +48,7 @@ function Starred() {
   const handleUnstar = async (fileId) => {
     try {
       await filesAPI.toggleStar(fileId);
-      loadStarredFiles(); // Reload
+      loadStarredFiles(); 
     } catch (error) {
       toast.error('Failed to unstar file');
     }

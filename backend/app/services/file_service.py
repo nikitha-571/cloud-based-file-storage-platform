@@ -14,7 +14,6 @@ def get_base_filename(filename: str) -> str:
 
     if '.' in filename:
         name, ext = filename.rsplit('.', 1)
-
         name = re.sub(r'\s*\(\d+\)\s*$', '', name)
         return f"{name}.{ext}"
     else:
@@ -32,17 +31,16 @@ def get_next_version_filename(base_filename: str, version_number: int) -> str:
     else:
         return f"{base_filename}({version_number - 1})"
 
-
 def upload_file(
         db: Session,
         file: UploadFile,
         user_email: str,
         folder_id: Optional[int] = None
 ):
-
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
 
     if folder_id:
         folder = db.query(Folder).filter(
@@ -51,11 +49,14 @@ def upload_file(
         ).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
+        print(f"✅ Validated folder_id: {folder_id} - Folder name: {folder.name}")
+    else:
+        print(f"📂 No folder_id provided - uploading to root")
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
+    MAX_FILE_SIZE = 500 * 1024 * 1024
 
     try:
         file.file.seek(0, 2)
@@ -78,12 +79,24 @@ def upload_file(
 
         print(f"📤 Uploading: {file.filename}")
         print(f"🔍 Base filename: {base_filename}")
+        print(f"📁 Target folder_id: {folder_id}")
 
-        existing_files = db.query(File).filter(
+
+        query_filter = [
             File.owner_id == user.id,
-            File.folder_id == folder_id,
             File.is_deleted == False
-        ).all()
+        ]
+
+
+        if folder_id is None:
+            query_filter.append(File.folder_id == None)
+        else:
+            query_filter.append(File.folder_id == folder_id)
+
+        existing_files = db.query(File).filter(*query_filter).all()
+
+        print(f"🔎 Found {len(existing_files)} existing files in this location")
+
 
         original_file = None
         max_version = 0
@@ -94,6 +107,7 @@ def upload_file(
                 if existing.current_version > max_version:
                     max_version = existing.current_version
                     original_file = existing
+                print(f"📌 Found matching file: {existing.name} (version {existing.current_version})")
 
         if original_file:
 
@@ -101,8 +115,10 @@ def upload_file(
             new_filename = get_next_version_filename(base_filename, new_version_number)
 
             print(f"📝 Found existing file series. Creating version {new_version_number}: {new_filename}")
+            print(f"📁 Will be created in folder_id: {folder_id}")
 
             storage_data = upload_file_to_storage(file, user_email)
+
 
             new_file = File(
                 name=new_filename,
@@ -116,6 +132,9 @@ def upload_file(
 
             db.add(new_file)
             db.flush()
+
+            print(f"✅ Created file with folder_id: {new_file.folder_id}")
+
 
             new_version = FileVersion(
                 file_id=original_file.id,
@@ -138,21 +157,24 @@ def upload_file(
                     "version_number": new_version_number,
                     "file_size": storage_data["file_size"],
                     "file_type": storage_data["file_type"],
-                    "base_filename": base_filename
+                    "base_filename": base_filename,
+                    "folder_id": folder_id
                 }
             )
 
             db.commit()
             db.refresh(new_file)
 
-            print(f"✅ Created {new_filename} as version {new_version_number}")
+            print(f"✅ Created {new_filename} as version {new_version_number} in folder {folder_id}")
             return new_file
 
         else:
-            # No file with this base name -> Create first version
+
             print(f"🆕 Creating new file: {base_filename} (Version 1)")
+            print(f"📁 Will be created in folder_id: {folder_id}")
 
             storage_data = upload_file_to_storage(file, user_email)
+
 
             db_file = File(
                 name=base_filename,
@@ -166,6 +188,8 @@ def upload_file(
 
             db.add(db_file)
             db.flush()
+
+            print(f"✅ Created file with folder_id: {db_file.folder_id}")
 
             # Create first version entry
             first_version = FileVersion(
@@ -195,7 +219,7 @@ def upload_file(
             db.commit()
             db.refresh(db_file)
 
-            print(f"✅ Created {base_filename} (Version 1)")
+            print(f"✅ Created {base_filename} (Version 1) in folder {folder_id}")
             return db_file
 
     except HTTPException:
@@ -210,8 +234,6 @@ def upload_file(
             status_code=500,
             detail=f"Upload failed: {str(e)}"
         )
-
-
 def get_file_versions(db: Session, file_id: int, user_email: str):
     """Get all versions of a file"""
     user = db.query(User).filter(User.email == user_email).first()
@@ -226,6 +248,7 @@ def get_file_versions(db: Session, file_id: int, user_email: str):
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
 
+
     base_filename = get_base_filename(file.name)
 
     original_file = db.query(File).filter(
@@ -236,6 +259,7 @@ def get_file_versions(db: Session, file_id: int, user_email: str):
     ).first()
 
     if not original_file:
+
         original_file = file
 
     versions = db.query(FileVersion).filter(
@@ -246,6 +270,7 @@ def get_file_versions(db: Session, file_id: int, user_email: str):
 
 
 def restore_file_version(db: Session, file_id: int, version_number: int, user_email: str):
+
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -269,6 +294,7 @@ def restore_file_version(db: Session, file_id: int, version_number: int, user_em
     if not original_file:
         original_file = file
 
+
     version = db.query(FileVersion).filter(
         FileVersion.file_id == original_file.id,
         FileVersion.version_number == version_number
@@ -277,12 +303,14 @@ def restore_file_version(db: Session, file_id: int, version_number: int, user_em
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
 
+
     max_version = db.query(FileVersion).filter(
         FileVersion.file_id == original_file.id
     ).count()
 
     new_version_number = max_version + 1
     new_filename = get_next_version_filename(base_filename, new_version_number)
+
 
     new_file = File(
         name=new_filename,
@@ -296,6 +324,7 @@ def restore_file_version(db: Session, file_id: int, version_number: int, user_em
 
     db.add(new_file)
     db.flush()
+
 
     new_version = FileVersion(
         file_id=original_file.id,
@@ -369,6 +398,7 @@ def get_user_files(
             File.created_at.desc() if sort_order == "desc" else File.created_at.asc()
         )
 
+
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
 
@@ -376,7 +406,6 @@ def get_user_files(
 
 
 def get_file_with_url(db: Session, file_id: int, user_email: str):
-
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -398,7 +427,7 @@ def get_file_with_url(db: Session, file_id: int, user_email: str):
 
 
 def get_file_preview(db: Session, file_id: int, user_email: str):
-
+    """Get file with preview URL and metadata"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -435,7 +464,7 @@ def get_file_preview(db: Session, file_id: int, user_email: str):
 
 
 def delete_file(db: Session, file_id: int, user_email: str):
-
+    """Soft delete a file (move to trash)"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -470,7 +499,7 @@ def delete_file(db: Session, file_id: int, user_email: str):
 
 
 def permanently_delete_file(db: Session, file_id: int, user_email: str):
-
+    """Permanently delete a file from storage and database"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -488,7 +517,7 @@ def permanently_delete_file(db: Session, file_id: int, user_email: str):
     except Exception as e:
         print(f"Warning: Could not delete file from storage: {e}")
 
-
+    # Delete from database
     db.delete(file)
     db.commit()
 
@@ -496,7 +525,7 @@ def permanently_delete_file(db: Session, file_id: int, user_email: str):
 
 
 def toggle_star(db: Session, file_id: int, user_email: str):
-
+    """Toggle starred status of a file"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -530,7 +559,7 @@ def get_starred_files(db: Session, user_email: str) -> List[File]:
 
 
 def get_trashed_files(db: Session, user_email: str) -> List[File]:
-
+    """Get all deleted files for a user"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -542,7 +571,7 @@ def get_trashed_files(db: Session, user_email: str) -> List[File]:
 
 
 def restore_file(db: Session, file_id: int, user_email: str):
-
+    """Restore a file from trash"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -575,6 +604,7 @@ def search_files(
         sort_by: Optional[str] = "created_at",
         sort_order: Optional[str] = "desc"
 ) -> List[File]:
+    """Advanced search files with filters and sorting"""
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -584,6 +614,7 @@ def search_files(
         File.is_deleted == False
     )
 
+    # Apply filters
     if query:
         files_query = files_query.filter(File.name.ilike(f"%{query}%"))
     if file_type:
@@ -606,7 +637,7 @@ def search_files(
         files_query = files_query.order_by(
             File.file_type.desc() if sort_order == "desc" else File.file_type.asc()
         )
-    else:  # default to created_at
+    else:
         files_query = files_query.order_by(
             File.created_at.desc() if sort_order == "desc" else File.created_at.asc()
         )

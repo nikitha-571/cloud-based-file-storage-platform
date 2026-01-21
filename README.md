@@ -7,9 +7,9 @@ It allows users to securely upload, organize, preview, share, and manage files w
 
 ## 🔗 Live Demo
 
-- **Frontend**: https://your-frontend.vercel.app  
-- **Backend API**: https://your-backend.onrender.com  
-- **Swagger Docs**: https://your-backend.onrender.com/docs  
+- **Frontend**: https://cloud-storage-frontend.netlify.app
+- **Backend API**: https://cloud-storage-backend-k1dt.onrender.com
+- **Swagger Docs**: https://cloud-storage-backend-k1dt.onrender.com/docs
 
 
 
@@ -184,7 +184,7 @@ New users can create an account using email and password. The system securely ha
 
 **Screenshot:**
 
-![User Registration](screenshots/register.png)
+![User Registration](Screenshots/Register.png)
 
 
 ### 2️⃣ User Login
@@ -199,7 +199,7 @@ Registered users authenticate using email/password. Upon successful login, the b
 
 **Screenshot:**
 
-![User Login](screenshots/login.png)
+![User Login](Screenshots/Login.png)
 
 
 ### 3️⃣ Google OAuth Login
@@ -221,7 +221,7 @@ Users can authenticate using their Google account. The system uses OAuth 2.0 pro
 
 **Screenshot:**
 
-![Google OAuth Login](screenshots/google-login.png)
+![Google OAuth Login](Screenshots/Google-Login.png)
 
 
 ### 4️⃣ Dashboard - File & Folder View
@@ -245,7 +245,7 @@ Main dashboard displays user's files and folders in grid or list view. Shows fil
 
 **Screenshot:**
 
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](Screenshots/Dashboard.png)
 
 
 ### 5️⃣ File Upload with Progress
@@ -269,7 +269,7 @@ Users can upload files via drag-and-drop or file picker. The system displays rea
 
 **Screenshot:**
 
-![File Upload](screenshots/upload.png)
+![File Upload](Screenshots/upload.png)
 
 
 
@@ -284,7 +284,7 @@ Users can organize files by creating folders and nested sub-folders. Supports hi
 
 **Screenshot:**
 
-![Create Folder](screenshots/create-folder.png)
+![Create Folder](Screenshots/create-folder.png)
 
 
 ### 7️⃣ File Preview
@@ -308,7 +308,7 @@ Supported file formats can be previewed directly in the browser without download
 
 **Screenshot:**
 
-![File Preview](screenshots/file-preview.png)
+![File Preview](Screenshots/file-preview.png)
 
 
 ### 8️⃣ Tag Management
@@ -330,7 +330,7 @@ Create color-coded tags to organize files across folders. Tags provide visual ca
 
 **Screenshot:**
 
-![Tag Management](screenshots/tags.png)
+![Tag Management](Screenshots/tags.png)
 
 
 ### 9️⃣ File with Tags Display
@@ -344,7 +344,7 @@ Files show their applied tags as colored badges for quick visual identification.
 
 **Screenshot:**
 
-![File with Tags](screenshots/file-with-tags.png)
+![File with Tags](Screenshots/file-with-tags.png)
 
 
 ### 🔟 File Sharing
@@ -370,7 +370,7 @@ Share files with specific users via email or create public shareable links with 
 
 **Screenshot:**
 
-![Share Modal](screenshots/share.png)
+![Share Modal](Screenshots/Share.png)
 
 
 ### 1️⃣1️⃣ Version History
@@ -393,7 +393,7 @@ Every file update creates a new version. Users can view all versions with metada
 
 **Screenshot:**
 
-![Version History](screenshots/Version_History.png)
+![Version History](Screenshots/Version_History.png)
 
 
 ### 1️⃣2️⃣ Activity Log
@@ -414,7 +414,7 @@ Comprehensive audit trail of all user actions including uploads, deletes and res
 
 **Screenshot:**
 
-![Activity Log](screenshots/activity-log.png)
+![Activity Log](Screenshots/activity-log.png)
 
 
 ### 1️⃣3️⃣ Smart Search with Autocomplete
@@ -438,7 +438,7 @@ Real-time search with dropdown suggestions as you type. Shows matching files and
 
 **Screenshot:**
 
-![Search Autocomplete](screenshots/Search.png)
+![Search Autocomplete](Screenshots/Search.png)
 
 
 ### 1️⃣4️⃣ Trash & Restore
@@ -453,7 +453,7 @@ Deleted files/folders move to trash before permanent deletion. Supports individu
 
 **Screenshot:**
 
-![Trash](screenshots/trash.png)
+![Trash](Screenshots/Trash.png)
 
 
 ### 1️⃣5️⃣ Storage Usage Monitoring
@@ -475,7 +475,7 @@ Real-time storage quota indicator in sidebar showing used/total storage with col
 
 **Screenshot:**
 
-![Storage Usage](screenshots/storage-usage.png)
+![Storage Usage](Screenshots/Storage-usage.png)
 
 
 ## 🗄 Database Design (Key Tables)
@@ -498,6 +498,83 @@ Real-time storage quota indicator in sidebar showing used/total storage with col
 - **Many-to-Many**: Files ↔ Tags (via file_tags)
 - **One-to-Many**: File → Versions, File → Shares
 
+
+## 📡 API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/auth/register` | Register new user | No |
+| POST | `/auth/login` | Login user | No |
+| POST | `/auth/refresh` | Refresh access token | Yes |
+| GET | `/auth/google/url` | Get Google OAuth URL | No |
+| POST | `/auth/google/callback` | Handle OAuth callback | No |
+
+### Files
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/files/upload` | Upload file | Yes |
+| GET | `/files/` | List files (paginated) | Yes |
+| GET | `/files/search` | Search files | Yes |
+| GET | `/files/{id}` | Get file details | Yes |
+| GET | `/files/{id}/preview` | Get preview URL | Yes |
+| DELETE | `/files/{id}` | Move to trash | Yes |
+| DELETE | `/files/{id}/permanent` | Permanent delete | Yes |
+| POST | `/files/{id}/restore` | Restore from trash | Yes |
+| POST | `/files/{id}/star` | Toggle star | Yes |
+| GET | `/files/starred/all` | Get starred files | Yes |
+| GET | `/files/trash/all` | Get trashed files | Yes |
+
+### Folders
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/folders/` | Create folder | Yes |
+| GET | `/folders/` | List folders | Yes |
+| GET | `/folders/search` | Search folders | Yes |
+| PUT | `/folders/{id}` | Update folder | Yes |
+| DELETE | `/folders/{id}` | Move to trash | Yes |
+| POST | `/folders/{id}/restore` | Restore folder | Yes |
+
+### Tags
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/tags/` | Create tag | Yes |
+| GET | `/tags/` | List all tags | Yes |
+| PUT | `/tags/{id}` | Update tag | Yes |
+| DELETE | `/tags/{id}` | Delete tag | Yes |
+| POST | `/tags/file/{file_id}/tags` | Add tags to file | Yes |
+| GET | `/tags/{id}/files` | Get files by tag | Yes |
+
+### Shares
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/shares/` | Share with user | Yes |
+| GET | `/shares/shared-with-me` | Get shared items | Yes |
+| GET | `/shares/my-shares` | Get my shares | Yes |
+| DELETE | `/shares/{id}` | Remove share | Yes |
+| POST | `/shares/public-link` | Create public link | Yes |
+| GET | `/shares/public/{token}` | Access public link | No |
+
+### Versions
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/versions/file/{file_id}` | Get file versions | Yes |
+| POST | `/versions/file/{file_id}/restore/{version}` | Restore version | Yes |
+
+### Activity
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/activities/` | Get user activities | Yes |
+| DELETE | `/activities/{id}` | Delete activity | Yes |
+| POST | `/activities/bulk-delete` | Bulk delete | Yes |
+| DELETE | `/activities/clear/all` | Clear all logs | Yes |
 
 
 ## 💻 Installation Guide
@@ -539,7 +616,7 @@ cp .env.example .env
 # Edit .env with your credentials
 nano .env
 
-**Backend .env file:**
+**Backend .env file sample:**
 ```env
 DATABASE_URL=postgresql://user:password@host:port/database
 SUPABASE_URL=https://xxxxx.supabase.co
@@ -547,7 +624,7 @@ SUPABASE_KEY=your_supabase_key
 SECRET_KEY=your-secret-key-here
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:5173/auth/google/callback
+GOOGLE_REDIRECT_URI=your local host url/auth/google/callback
 ```
 
 **Start Backend:**
@@ -566,17 +643,20 @@ cp .env.example .env
 # Edit .env
 nano .env
 
-**Frontend .env file:**
+**Frontend .env file sample:**
 ```env
-VITE_API_URL=http://127.0.0.1:8000
+VITE_API_URL=your local host url
 VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 **Start Frontend:**
 npm run dev
 
-
-
+## 🚀 Deployment
+```
+Frontend (Vercel)
+Backend (Render)
+```
 
 
 
@@ -595,7 +675,8 @@ npm run dev
 - ✅ GDPR Compliance Tools
 
 
-👨‍💻 Author
+## 👨‍💻 Author
+
 Nikitha Devaraj
 
 

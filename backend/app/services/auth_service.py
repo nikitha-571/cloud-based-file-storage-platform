@@ -30,7 +30,6 @@ def authenticate_user(db: Session, email: str, password: str):
     if not user:
         return False
     if user.hashed_password is None:
-        # User created via OAuth (Google), doesn't have a password
         raise HTTPException(
             status_code=400,
             detail="This account uses Google Sign-In. Please use 'Continue with Google' to login."
@@ -42,11 +41,8 @@ def authenticate_user(db: Session, email: str, password: str):
 
 def request_password_reset(db: Session, email: str):
     """Create a password reset token"""
-
-    # Check if user exists
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        # For security, don't reveal if email exists
         return {"message": "If the email exists, a reset link will be sent"}
 
     if user.hashed_password is None and user.oauth_provider:
@@ -54,27 +50,24 @@ def request_password_reset(db: Session, email: str):
             "message": "This account uses Google Sign-In and doesn't have a password. Please login with Google."
         }
 
-    # Invalidate any existing tokens
     db.query(PasswordReset).filter(
         PasswordReset.email == email,
         PasswordReset.is_used == False
     ).update({"is_used": True})
 
-    # Create new reset token
     reset_token = PasswordReset(
         email=email,
-        expires_at=datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+        expires_at=datetime.utcnow() + timedelta(hours=1)
     )
 
     db.add(reset_token)
     db.commit()
     db.refresh(reset_token)
 
-    # In production, send email here
-    # For now, we'll return the token (remove this in production!)
+
     return {
         "message": "If the email exists, a reset link will be sent",
-        "reset_token": reset_token.reset_token  # REMOVE IN PRODUCTION
+        "reset_token": reset_token.reset_token
     }
 
 
@@ -95,19 +88,14 @@ def verify_reset_token(db: Session, token: str):
 
 def reset_password(db: Session, token: str, new_password: str):
     """Reset user password using token"""
-
-    # Verify token
     reset_request = verify_reset_token(db, token)
 
-    # Get user
     user = db.query(User).filter(User.email == reset_request.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Update password
     user.hashed_password = get_password_hash(new_password)
 
-    # Mark token as used
     reset_request.is_used = True
 
     db.commit()

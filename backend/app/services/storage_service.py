@@ -4,14 +4,15 @@ import uuid
 from fastapi import UploadFile, HTTPException
 import traceback
 
-# Initialize Supabase client
+
+
 supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
 def upload_file_to_storage(file: UploadFile, user_email: str) -> dict:
 
     try:
-        # Generate unique filename
+
         file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
         unique_filename = f"{user_email}/{uuid.uuid4()}.{file_extension}"
 
@@ -30,7 +31,6 @@ def upload_file_to_storage(file: UploadFile, user_email: str) -> dict:
         content_type = file.content_type if file.content_type else "application/octet-stream"
         print(f"☁️  Uploading to Supabase: {unique_filename}")
 
-        # Upload to Supabase Storage
         response = supabase.storage.from_('user-files').upload(
             path=unique_filename,
             file=file_content,

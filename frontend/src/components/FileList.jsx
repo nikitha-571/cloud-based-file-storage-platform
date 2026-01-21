@@ -151,12 +151,16 @@ const FileList = ({
         {folders.map((folder) => (
           <div
             key={`folder-${folder.id}`}
-            onClick={() => !isSearching && !selectionMode && onFolderClick(folder.id)}
+            onClick={() => {
+              if (!isSearching && !selectionMode) {
+                onFolderClick(folder.id);
+              }
+            }}
             className={`bg-white border-2 rounded-lg p-4 pb-12 hover:shadow-md transition cursor-pointer group relative ${
               selectionMode && selectedFolders.includes(folder.id)
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-blue-400'
-              }`}
+            }`}
           > 
             {selectionMode && (
               <button
@@ -183,21 +187,21 @@ const FileList = ({
             
             {/* Folder Actions */}
             {!selectionMode && (
-                <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(folder.id, 'folder');
-                    }}
-                    className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+              <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(folder.id, 'folder');
+                  }}
+                  className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
 
         {/* Files */}
         {files.map((file) => (
@@ -253,15 +257,15 @@ const FileList = ({
                     <TagIcon size={16} className="text-indigo-600" />
                   </button>
                 )}
+                <button
+                  onClick={(e) => handlePreviewClick(file, e)}
+                  className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition hover:bg-gray-100 z-10"
+                  title={isDownloadOnly(file.file_type) ? "Download to view" : "Preview"}
+                >
+                  <Eye size={16} className={isDownloadOnly(file.file_type) ? "text-orange-600" : "text-purple-600"} />
+                </button>
               </>
             )}
-            <button
-              onClick={(e) => handlePreviewClick(file, e)}
-              className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition hover:bg-gray-100 z-10"
-              title={isDownloadOnly(file.file_type) ? "Download to view" : "Preview"}
-            >
-              <Eye size={16} className={isDownloadOnly(file.file_type) ? "text-orange-600" : "text-purple-600"} />
-            </button>
 
             <div className="flex flex-col items-center text-center">
               {getFileIcon(file.file_type, file.name)}
@@ -299,50 +303,48 @@ const FileList = ({
 
             {/* Action Buttons */}
             {!selectionMode && (
-              <>
-                <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(file.id, file.name);
-                    }}
-                    className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded"
-                    title="Download"
-                  >
-                    <Download size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onShare && onShare(file);
-                    }}
-                    className="text-purple-500 hover:text-purple-700 p-1 hover:bg-purple-50 rounded"
-                    title="Share"
-                  >
-                    <Share size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleStar(file.id);
-                    }}
-                    className="text-yellow-500 hover:text-yellow-600 p-1 hover:bg-yellow-50 rounded"
-                    title={file.is_starred ? "Unstar" : "Star"}
-                  >
-                    <Star size={16} className={file.is_starred ? "fill-yellow-500" : ""} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(file.id, 'file');
-                    }}
-                    className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </>
+              <div className="absolute bottom-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(file.id, file.name);
+                  }}
+                  className="text-blue-500 hover:text-blue-700 p-1 hover:bg-blue-50 rounded"
+                  title="Download"
+                >
+                  <Download size={16} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShare && onShare(file);
+                  }}
+                  className="text-purple-500 hover:text-purple-700 p-1 hover:bg-purple-50 rounded"
+                  title="Share"
+                >
+                  <Share size={16} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleStar(file.id);
+                  }}
+                  className="text-yellow-500 hover:text-yellow-600 p-1 hover:bg-yellow-50 rounded"
+                  title={file.is_starred ? "Unstar" : "Star"}
+                >
+                  <Star size={16} className={file.is_starred ? "fill-yellow-500" : ""} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(file.id, 'file');
+                  }}
+                  className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             )}
           </div>
         ))}
@@ -378,7 +380,7 @@ const FileList = ({
           {folders.map((folder) => (
             <tr
               key={`folder-${folder.id}`}
-              onClick={() => !isSearching && onFolderClick(folder.id)}
+              onClick={() => !isSearching && !selectionMode && onFolderClick(folder.id)}
               className="hover:bg-gray-50 cursor-pointer"
             >
               <td className="px-6 py-4 whitespace-nowrap">
@@ -461,7 +463,6 @@ const FileList = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end gap-2">
-                  {/* Tag Button */}
                   {onEditTags && (
                     <button
                       onClick={(e) => {
@@ -475,7 +476,6 @@ const FileList = ({
                     </button>
                   )}
                   
-                  {/* Preview/Download Icon */}
                   <button
                     onClick={(e) => handlePreviewClick(file, e)}
                     className={isDownloadOnly(file.file_type) ? "text-orange-600 hover:text-orange-900" : "text-purple-600 hover:text-purple-900"}

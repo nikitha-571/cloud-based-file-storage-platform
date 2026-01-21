@@ -20,7 +20,7 @@ function FilePreviewModal({
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
-  const [fitMode, setFitMode] = useState('contain'); // 'contain' or 'fill'
+  const [fitMode, setFitMode] = useState('contain'); 
 
   useEffect(() => {
     loadFilePreview();

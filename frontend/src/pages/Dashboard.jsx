@@ -14,6 +14,7 @@ import UploadProgress from '../components/UploadProgress';
 import VersionHistoryModal from '../components/VersionHistoryModal';
 import TagManager from '../components/TagManager';
 import FileTagEditor from '../components/FileTagEditor';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 function Dashboard() {
   const [userEmail, setUserEmail] = useState('');
@@ -49,15 +50,26 @@ function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    console.log('🔐 Dashboard: Token check:', {
+      exists: !!token,
+      length: token?.length,
+      preview: token?.substring(0, 20) + '...'
+    });
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
     const email = localStorage.getItem('user_email');
     
     if (!token) {
       navigate('/login');
-    } else {
-      setUserEmail(email);
-      loadData();
+      return;
     }
-  }, [navigate, currentFolder, sortBy, sortOrder]);
+    setUserEmail(email);
+    console.log('📂 useEffect triggered - currentFolder:', currentFolder); 
+    loadData(1, currentFolder);  
+  
+  }, [currentFolder, sortBy, sortOrder]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -76,44 +88,56 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [previewFileId, previewFileIndex, files]);
 
-  const loadData = async (pageNum = 1) => {
+  const loadData = async (pageNum = 1, folderId = currentFolder) => {
+    console.log('🔍 loadData called');
+    console.log('   - pageNum:', pageNum);
+    console.log('   - folderId parameter:', folderId);
+    console.log('   - currentFolder state:', currentFolder);
     setLoading(true);
     setIsSearching(false);
     
+    console.log('📂 Loading data for folder:', folderId);
+    
     try {
       const [foldersRes, filesRes] = await Promise.all([
-        foldersAPI.getAll(currentFolder),
+        foldersAPI.getAll(folderId),
         filesAPI.getAll(currentFolder, sortBy, sortOrder, pageNum, 50)
       ]);
-      
+
       const filesData = Array.isArray(filesRes.data) ? filesRes.data : [];
       const foldersData = Array.isArray(foldersRes.data) ? foldersRes.data : [];
-      
+
       if (pageNum === 1) {
         setFiles(filesData);
       } else {
         setFiles(prev => [...prev, ...filesData]);
       }
-      
+
       setFolders(foldersData);
       setHasMore(filesData.length === 50);
-      
-      if (currentFolder) {
-        const currentFolderData = foldersData.find(f => f.id === currentFolder) 
-          || await getCurrentFolderInfo(currentFolder);
-        
-        if (currentFolderData) {
-          setBreadcrumbs([{ id: currentFolderData.id, name: currentFolderData.name }]);
+
+      if (folderId) {
+        try {
+          const pathResponse = await foldersAPI.getPath(folderId);
+          setBreadcrumbs(pathResponse.data);
+          console.log('🍞 Breadcrumbs:', pathResponse.data);
+        }catch (error){
+          console.error('Failed to load folder path:', error);
+          const currentFolderData = foldersData.find(f => f.id === folderId) 
+          || await getCurrentFolderInfo(folderId);
+          if (currentFolderData) {
+            setBreadcrumbs([{ id: currentFolderData.id, name: currentFolderData.name }]);
+          }
         }
       } else {
         setBreadcrumbs([]);
       }
-      
+
     } catch (error) {
       console.error('Error loading data:', error);
       setFiles([]);
       setFolders([]);
-      
+
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         navigate('/login');
@@ -184,6 +208,26 @@ function Dashboard() {
   const handleFileUpload = async (file) => {
     if (!file) return;
 
+    
+    const uploadFolderId = currentFolder;
+    
+    console.log('📤 UPLOAD - Starting upload');
+    console.log('📁 UPLOAD - Current folder state:', uploadFolderId);
+    console.log('📁 UPLOAD - Upload folder ID (captured):', uploadFolderId);
+    console.log('📄 UPLOAD - File name:', file.name);
+    
+    const token = localStorage.getItem('token');
+    console.log('🔐 Upload auth check:');
+    console.log('   Token exists:', !!token);
+    console.log('   Token length:', token?.length);
+    console.log('   Token preview:', token?.substring(0, 30) + '...');
+    
+    if (!token) {
+      toast.error('Authentication required. Please log in again.');
+      navigate('/login');
+      return;
+    }
+
     const uploadId = Date.now();
     const newUpload = {
       id: uploadId,
@@ -196,7 +240,10 @@ function Dashboard() {
     setUploads(prev => [...prev, newUpload]);
 
     try {
-      await filesAPI.upload(file, currentFolder, (progress) => {
+  
+      console.log('📤 Calling filesAPI.upload with folder_id:', uploadFolderId);
+
+      await filesAPI.upload(file, uploadFolderId, (progress) => {
         setUploads(prev =>
           prev.map(upload =>
             upload.id === uploadId
@@ -215,11 +262,10 @@ function Dashboard() {
       );
 
       toast.success(`${file.name} uploaded successfully!`);
-      loadData();
+      console.log('🔄 UPLOAD - Reloading with folder:', uploadFolderId);
 
-      setTimeout(() => {
-        setUploads(prev => prev.filter(u => u.id !== uploadId));
-      }, 3000);
+      
+      loadData(1, uploadFolderId);
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -234,15 +280,37 @@ function Dashboard() {
       );
 
       toast.error(errorMessage);
+
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error('Session expired. Please log in again.');
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }, 2000);
+      }
     }
   };
-
   const handleRemoveUpload = (uploadId) => {
     setUploads(prev => prev.filter(u => u.id !== uploadId));
   };
 
+  const handleFolderClick = (folderId) => {
+    console.log('📂 Opening folder ID:', folderId);
+    console.log('📂 Before setState - currentFolder:', currentFolder); 
+    
+    setCurrentFolder(folderId);
+    console.log('📂 After setState - currentFolder:', currentFolder);
+  };
+  const handleBreadcrumbNavigate = (folderId) => {
+    console.log('🍞 Navigating to folder:', folderId);
+    setCurrentFolder(folderId);
+  };
+
   const handleFileInputChange = (event) => {
     const files = Array.from(event.target.files);
+    console.log('📤 Files selected:', files.length);
+    console.log('📁 Current folder for upload:', currentFolder);
     files.forEach(file => handleFileUpload(file));
     event.target.value = '';
   };
@@ -269,8 +337,11 @@ function Dashboard() {
     e.stopPropagation();
     setDragActive(false);
 
+    
+    console.log('📦 Drop - Current folder:', currentFolder);
+
     const files = Array.from(e.dataTransfer.files);
-    files.forEach(file => handleFileUpload(file));
+    files.forEach(file => handleFileUpload(file)); 
   };
 
   const handleCreateFolder = async () => {
@@ -280,7 +351,7 @@ function Dashboard() {
       await foldersAPI.create(newFolderName, currentFolder);
       setNewFolderName('');
       setShowCreateFolder(false);
-      loadData();
+      loadData(1,currentFolder);
       toast.success(`Folder "${newFolderName}" created!`);
     } catch (error) {
       toast.error('Failed to create folder: ' + (error.response?.data?.detail || 'Unknown error'));
@@ -417,10 +488,7 @@ function Dashboard() {
     }
 
     try {
-      // Delete selected files
       const filePromises = selectedItems.files.map(fileId => filesAPI.delete(fileId));
-      
-      // Delete selected folders
       const folderPromises = selectedItems.folders.map(folderId => foldersAPI.delete(folderId));
 
       await Promise.all([...filePromises, ...folderPromises]);
@@ -451,7 +519,7 @@ function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-auto p-6">
-          <div className="flex items-center gap-2 mb-4 text-sm overflow-x-auto pb-2">
+          {/* <div className="flex items-center gap-2 mb-4 text-sm overflow-x-auto pb-2">
             <button
               onClick={() => {
                 setCurrentFolder(null);
@@ -485,7 +553,12 @@ function Dashboard() {
                 <span className="text-gray-600 italic">Search Results</span>
               </>
             )}
-          </div>
+          </div> */}
+          <Breadcrumbs
+            breadcrumbs={breadcrumbs}
+            onNavigate={handleBreadcrumbNavigate}
+            isSearching={isSearching}
+          />
 
           <div className="bg-white rounded-xl shadow-md p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -530,7 +603,6 @@ function Dashboard() {
                   </>
                 ) : (
                   <>
-
                     <button
                       onClick={isAllSelected() ? deselectAll : selectAll}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
@@ -631,7 +703,7 @@ function Dashboard() {
                     viewMode={view}
                     onDelete={handleDelete}
                     onToggleStar={handleToggleStar}
-                    onFolderClick={setCurrentFolder}
+                    onFolderClick={handleFolderClick}
                     onPreview={handlePreview}
                     onShare={handleShare}
                     onEditTags={(file) => setTagEditorFile(file)}

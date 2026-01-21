@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -29,21 +30,86 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Add token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    
+    console.group('🔐 REQUEST INTERCEPTOR');
+    console.log('URL:', config.url);
+    console.log('Method:', config.method);
+    console.log('Token exists:', !!token);
+    
+    if (token) {
+     
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Authorization header set:', config.headers.Authorization?.substring(0, 50) + '...');
+    } else {
+      console.warn('⚠️ No token found in localStorage');
+    }
+    
+    if (config.params) {
+      console.log('📋 Query params:', config.params);
+    }
+    
+    console.log('Final headers:', config.headers);
+    console.groupEnd();
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request interceptor error:', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // If error is 401 and we haven't tried to refresh yet
+    
+    
+    if (error.response) {
+      console.group('❌ API ERROR');
+      console.log('Status:', error.response.status);
+      console.log('URL:', originalRequest.url);
+      console.log('Method:', originalRequest.method);
+      console.log('Detail:', error.response?.data?.detail);
+      console.log('Had auth header:', !!originalRequest.headers?.Authorization);
+      console.groupEnd();
+    }
+    
+    if (error.response?.status === 403) {
+      console.error('❌ 403 FORBIDDEN ERROR');
+      console.error('   URL:', originalRequest.url);
+      console.error('   Message:', error.response?.data?.detail);
+      
+     
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
+        
+        try {
+          console.log('🔄 Attempting token refresh...');
+          const refreshResponse = await api.post('/auth/refresh');
+          const { access_token } = refreshResponse.data;
+          
+          localStorage.setItem('token', access_token);
+          api.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
+          originalRequest.headers.Authorization = 'Bearer ' + access_token;
+          
+          console.log('✅ Token refreshed! Retrying request...');
+          return api(originalRequest);
+        } catch (refreshError) {
+          console.error('❌ Token refresh failed:', refreshError);
+          
+          localStorage.clear();
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+    
+  
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -152,27 +218,44 @@ export const foldersAPI = {
   search: (query) => {
     return api.get('/folders/search', { params: { q: query } });
   },
+  getPath: (folderId) => {
+    return api.get(`/folders/${folderId}/path`);
+  },
 };
 
 // Files API
 export const filesAPI = {
   getAll: (folderId = null, sortBy = 'created_at', sortOrder = 'desc', page = 1, limit = 50) => {
     const params = { sort_by: sortBy, sort_order: sortOrder, page, limit };
-    if (folderId) params.folder_id = folderId;
+    
+    
+    if (folderId !== null && folderId !== undefined) {
+      params.folder_id = folderId;
+    }
+    
+    console.log('📂 filesAPI.getAll params:', params);
     return api.get('/files/', { params });
   },
-  upload: (file, folderId = null, onProgress = null) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const params = folderId ? { folder_id: folderId } : {};
-
-    return api.post('/files/upload', formData, {
-      params,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  
+      upload: (file, folderId, onProgress = null) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+     
+      if (folderId !== null && folderId !== undefined) {
+        formData.append('folder_id', folderId);
+      }
+    
+      return api.post('/files/upload', formData, {
+       
+        params: folderId ? { folder_id: folderId } : {}, 
+        onUploadProgress: onProgress,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+  
       onUploadProgress: (progressEvent) => {
-        if (onProgress) {
+        if (onProgress && progressEvent.total) {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
           );
@@ -181,6 +264,7 @@ export const filesAPI = {
       },
     });
   },
+  
   getDownloadUrl: (fileId) => {
     return api.get(`/files/${fileId}`);
   },

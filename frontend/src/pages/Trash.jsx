@@ -112,9 +112,9 @@ function Trash() {
     if (!confirm(`Permanently delete ALL ${files.length + folders.length} items in trash? This action cannot be undone!`)) return;
 
     try {
-      // Delete all files
+     
       const filePromises = files.map(file => filesAPI.permanentDelete(file.id));
-      // Delete all folders
+      
       const folderPromises = folders.map(folder => foldersAPI.permanentDelete(folder.id));
 
       await Promise.all([...filePromises, ...folderPromises]);
