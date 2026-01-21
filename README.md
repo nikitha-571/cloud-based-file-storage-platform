@@ -654,7 +654,7 @@ npm run dev
 
 ## 🚀 Deployment
 ```
-Frontend (Vercel)
+Frontend (Netlify)
 Backend (Render)
 ```
 
