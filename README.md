@@ -1,4 +1,4 @@
-# ☁️ Cloud Storage – Secure File Management Platform
+# ☁️ Cloud Based – File Strorage Platform
 
 A **full-stack cloud storage web application** inspired by Google Drive, built using **FastAPI** and **React**.  
 It allows users to securely upload, organize, preview, share, and manage files with advanced features such as **version history**, **activity logs**, **tags**, and **intelligent search**.
